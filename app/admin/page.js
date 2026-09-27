@@ -25,6 +25,10 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [generatorOpen, setGeneratorOpen] = useState(false);
+  const [generatorLoading, setGeneratorLoading] = useState(false);
+  const [generatorError, setGeneratorError] = useState('');
+  const [generator, setGenerator] = useState({ subject: '', syllabus: '', category: 'Computer Science & Tech', difficulty: 'Medium', questionCount: 5, duration: 15, negativeMarks: 0.25 });
 
   useEffect(() => {
     let active = true;
@@ -90,6 +94,34 @@ export default function AdminPage() {
     setNotice('');
   }
 
+  function updateGenerator(field, value) {
+    setGenerator((current) => ({ ...current, [field]: value }));
+  }
+
+  async function generateExam(event) {
+    event.preventDefault();
+    setGeneratorLoading(true);
+    setGeneratorError('');
+    try {
+      const response = await fetch('/api/admin/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...generator, questionCount: Number(generator.questionCount), duration: Number(generator.duration), negativeMarks: Number(generator.negativeMarks) }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not generate an exam.');
+      setForm({ ...emptyQuiz(), ...data.quiz });
+      setEditingId('');
+      setGeneratorOpen(false);
+      setNotice('AI draft generated. Review the questions, then save the quiz.');
+      document.getElementById('quiz-editor')?.scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+      setGeneratorError(err.message || 'Could not generate an exam.');
+    } finally {
+      setGeneratorLoading(false);
+    }
+  }
+
   async function submitQuiz(event) {
     event.preventDefault();
     setLoading(true);
@@ -153,7 +185,7 @@ export default function AdminPage() {
         {notice && <p role="status" className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
 
         <section className="mt-8" aria-labelledby="quiz-admin-list">
-          <div className="mb-4 flex items-center justify-between"><h2 id="quiz-admin-list" className="text-xl font-bold text-violet-950">Quizzes ({quizzes.length})</h2><button type="button" onClick={resetForm} className="min-h-11 rounded-lg bg-violet-700 px-4 text-sm font-semibold text-white">Create quiz</button></div>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 id="quiz-admin-list" className="text-xl font-bold text-violet-950">Quizzes ({quizzes.length})</h2><div className="flex flex-wrap gap-2"><button type="button" onClick={() => { setGeneratorError(''); setGeneratorOpen(true); }} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-violet-200 bg-white px-4 text-sm font-semibold text-violet-800">✦ Generate with AI</button><button type="button" onClick={resetForm} className="min-h-11 rounded-lg bg-violet-700 px-4 text-sm font-semibold text-white">Create quiz</button></div></div>
           <div className="overflow-x-auto rounded-xl border border-violet-100 bg-white"><table className="w-full min-w-[540px] text-left text-sm"><thead className="bg-violet-50 text-xs uppercase text-violet-900"><tr><th className="px-4 py-3">Title</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Questions</th><th className="px-4 py-3">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{quizzes.map((quiz) => <tr key={quiz.id}><td className="px-4 py-3 font-semibold">{quiz.title}</td><td className="px-4 py-3">{quiz.category}</td><td className="px-4 py-3">{quiz.questions.length}</td><td className="px-4 py-3"><div className="flex gap-2"><button type="button" disabled={loading} onClick={() => editQuiz(quiz)} className="min-h-10 rounded-md border border-violet-200 px-3 font-semibold text-violet-800 disabled:opacity-50">Edit</button><button type="button" disabled={loading} onClick={() => deleteQuiz(quiz)} className="min-h-10 rounded-md border border-rose-200 px-3 font-semibold text-rose-700 disabled:opacity-50">Delete</button></div></td></tr>)}</tbody></table></div>
         </section>
 
@@ -191,6 +223,21 @@ export default function AdminPage() {
             <div className="flex flex-wrap gap-3"><button type="submit" disabled={loading} className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-violet-700 px-5 font-bold text-white disabled:opacity-60">{loading && <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />}{loading ? 'Saving...' : editingId ? 'Save changes' : 'Create quiz'}</button>{editingId && <button type="button" disabled={loading} onClick={resetForm} className="min-h-12 rounded-lg border border-slate-300 px-5 font-semibold text-slate-700 disabled:opacity-50">Cancel edit</button>}</div>
           </form>
         </section>
+        {generatorOpen && <div className="fixed inset-0 z-40 grid place-items-center bg-slate-950/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="generator-heading">
+          <div className="max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5"><div><h2 id="generator-heading" className="flex items-center gap-2 text-lg font-bold text-slate-900"><span className="grid h-8 w-8 place-items-center rounded-lg bg-violet-600 text-white">✦</span>Dynamic AI Exam Generator</h2><p className="mt-1 text-sm text-slate-500">Generate a targeted mock test on any topic or syllabus.</p></div><button type="button" aria-label="Close generator" onClick={() => setGeneratorOpen(false)} className="grid h-10 w-10 place-items-center rounded-lg text-2xl text-slate-400 hover:bg-slate-100 hover:text-slate-700">×</button></div>
+            <form onSubmit={generateExam} className="space-y-5 px-6 py-6">
+              <div><p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Quick subject presets</p><div className="flex flex-wrap gap-2">{['AWS Cloud Solutions Architect', 'React 19 & Modern Web Performance', 'USMLE Clinical Biochemistry', 'GRE Quantitative & Probability', 'Machine Learning & Transformer Models', 'Cardiology & ECG Arrhythmias'].map((preset) => <button key={preset} type="button" onClick={() => updateGenerator('subject', preset)} className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${generator.subject === preset ? 'border-violet-300 bg-violet-50 text-violet-800' : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-violet-200'}`}>{preset}</button>)}</div></div>
+              <label className="block text-sm font-semibold text-slate-700">Exam subject or core topic *<input required maxLength={120} value={generator.subject} onChange={(event) => updateGenerator('subject', event.target.value)} placeholder="e.g. Distributed Database Consistency, Advanced React Runtimes..." className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 px-3 font-normal focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-100" /></label>
+              <label className="block text-sm font-semibold text-slate-700">Optional: Paste syllabus, study notes, or lecture transcripts<span className="float-right text-xs font-normal text-slate-400">Derives questions from source</span><textarea maxLength={12000} rows={3} value={generator.syllabus} onChange={(event) => updateGenerator('syllabus', event.target.value)} placeholder="Paste specific textbook notes, articles, or documentation paragraphs here..." className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs font-normal focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-100" /></label>
+              <div className="grid gap-4 border-t border-slate-200 pt-5 sm:grid-cols-2"><label className="text-sm font-semibold text-slate-700">Category<select value={generator.category} onChange={(event) => updateGenerator('category', event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 font-normal"><option>Computer Science & Tech</option><option>Science</option><option>General</option><option>Professional</option><option>Other</option></select></label><label className="text-sm font-semibold text-slate-700">Difficulty<select value={generator.difficulty} onChange={(event) => updateGenerator('difficulty', event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 font-normal"><option>Easy</option><option>Medium</option><option>Hard</option></select></label></div>
+              <div className="grid gap-4 sm:grid-cols-2"><fieldset><legend className="text-sm font-semibold text-slate-700">Question count: <span className="text-violet-700">{generator.questionCount}</span></legend><div className="mt-2 grid grid-cols-3 gap-2">{[5, 10, 15].map((count) => <button key={count} type="button" onClick={() => updateGenerator('questionCount', count)} className={`min-h-10 rounded-lg border text-sm font-semibold ${Number(generator.questionCount) === count ? 'border-violet-600 bg-violet-600 text-white' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>{count} Questions</button>)}</div></fieldset><fieldset><legend className="text-sm font-semibold text-slate-700">Duration: <span className="text-violet-700">{generator.duration} min</span></legend><div className="mt-2 grid grid-cols-3 gap-2">{[10, 15, 20].map((duration) => <button key={duration} type="button" onClick={() => updateGenerator('duration', duration)} className={`min-h-10 rounded-lg border text-sm font-semibold ${Number(generator.duration) === duration ? 'border-violet-600 bg-violet-600 text-white' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>{duration} Mins</button>)}</div></fieldset></div>
+              <fieldset><legend className="text-sm font-semibold text-slate-700">Negative marking scheme</legend><div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">{[[0, 'None (0)'], [0.25, '-0.25 (1/4)'], [0.33, '-0.33 (1/3)'], [0.5, '-0.50 (1/2)']].map(([value, label]) => <button key={label} type="button" onClick={() => updateGenerator('negativeMarks', value)} className={`min-h-10 rounded-lg border text-sm font-semibold ${Number(generator.negativeMarks) === value ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>{label}</button>)}</div></fieldset>
+              {generatorError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{generatorError}</p>}
+              <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end"><button type="button" onClick={() => setGeneratorOpen(false)} className="min-h-11 rounded-lg px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button><button type="submit" disabled={generatorLoading || !generator.subject.trim()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-violet-600 px-5 text-sm font-bold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50">{generatorLoading ? 'Generating exam...' : '✦ Generate & review'}</button></div>
+            </form>
+          </div>
+        </div>}
       </div>
     </div>
   );

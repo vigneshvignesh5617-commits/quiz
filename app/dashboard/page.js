@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import ExamGenerator from './ExamGenerator';
 
 function displayDate(value) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
@@ -53,7 +54,7 @@ export default function DashboardPage() {
         ) : data && <>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--accent)]">Student dashboard</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-[var(--ink)] sm:text-4xl">Welcome, {data.user.name}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-4"><p className="text-slate-600">Your practice, scores, and next challenge in one place.</p><a href="/profile" className="min-h-11 inline-flex items-center rounded-lg border border-violet-200 bg-white px-4 text-sm font-semibold text-violet-800">Edit profile</a></div>
+          <div className="mt-2 flex flex-wrap items-center gap-3"><p className="mr-auto text-slate-600">Your practice, scores, and next challenge in one place.</p><ExamGenerator /><a href="/profile" className="inline-flex min-h-11 items-center rounded-lg border border-violet-200 bg-white px-4 text-sm font-semibold text-violet-800">Edit profile</a></div>
 
           <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Your progress">
             {[[data.availableExams.length, 'Available exams'], [data.upcomingExams.length, 'Upcoming exams'], [data.completedCount, 'Completed exams'], [`${data.bestScore}%`, 'Best score'], [`${data.averageScore}%`, 'Average score'], [data.attemptCount, 'Number of attempts']].map(([value, label]) => <div key={label} className="surface rounded-xl p-5"><p className="text-3xl font-extrabold text-[var(--ink)]">{value}</p><p className="mt-1 text-sm text-[var(--muted)]">{label}</p></div>)}
