@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --ink: #172033;
+    --muted: #667085;
+    --canvas: #f5f7fb;
+    --line: #e4e8f0;
+    --accent: #2457d6;
+    --accent-dark: #193f9e;
+    --warm: #f3b33d;
+  }
+
+  html {
+    min-height: 100%;
+    background: var(--canvas);
+  }
+
+  body {
+    min-height: 100%;
+    background: var(--canvas);
+    color: var(--ink);
+  }
+
+  ::selection {
+    background: #cbd8ff;
+    color: var(--ink);
+  }
+}
+
+@layer components {
+  .page-canvas {
+    min-height: 70vh;
+    background: linear-gradient(180deg, #f8faff 0%, var(--canvas) 28rem);
+  }
+
+  .surface {
+    border: 1px solid var(--line);
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(23, 32, 51, 0.05);
+  }
+}
+
